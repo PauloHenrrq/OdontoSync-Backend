@@ -1,0 +1,143 @@
+// ============================================================
+// OdontoSync — Prisma Schema
+// Modelo de dados completo com Elo Central (telefone).
+// Soft-delete com status — nunca deletar registros.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum UserRole {
+  PATIENT
+  ADMIN
+}
+
+enum EntityStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  ABSENT
+}
+
+enum NotificationChannel {
+  PUSH
+  WHATSAPP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ============================================================
+// Models
+// ============================================================
+
+model User {
+  id        String       @id @default(uuid())
+  name      String
+  email     String       @unique
+  phone     String       @unique // Elo Central
+  password  String
+  role      UserRole     @default(PATIENT)
+  status    EntityStatus @default(ACTIVE)
+  avatarUrl String?
+
+  appointments  Appointment[]
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model DentalService {
+  id          String  @id @default(uuid())
+  name        String
+  duration    Int     // minutos
+  description String?
+  icon        String?
+
+  appointments Appointment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dental_services")
+}
+
+model Appointment {
+  id          String            @id @default(uuid())
+  phone       String            // Elo Central — vínculo por telefone
+  userId      String?           // Nullable — agendamento pode ser "órfão"
+  user        User?             @relation(fields: [userId], references: [id])
+  serviceId   String
+  service     DentalService     @relation(fields: [serviceId], references: [id])
+  dentistName String
+  date        DateTime
+  time        String            // HH:mm
+  status      AppointmentStatus @default(PENDING)
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phone])
+  @@index([date])
+  @@index([userId])
+  @@map("appointments")
+}
+
+model Notification {
+  id      String              @id @default(uuid())
+  phone   String
+  userId  String?
+  user    User?               @relation(fields: [userId], references: [id])
+  channel NotificationChannel @default(PUSH)
+  title   String
+  message String
+  read    Boolean             @default(false)
+  sentAt  DateTime?
+  status  NotificationStatus  @default(PENDING)
+
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@index([userId])
+  @@map("notifications")
+}
+
+model ClinicConfig {
+  id                   String  @id @default(uuid())
+  name                 String
+  address              String?
+  phone                String?
+  logoUrl              String?
+  absenceReduction     Boolean @default(true)
+  reminderHoursBefore  Int     @default(24)
+  confirmationTemplate String  @default("")
+  cancellationTemplate String  @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("clinic_config")
+}
