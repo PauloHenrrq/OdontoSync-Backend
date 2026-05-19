@@ -1,100 +1,99 @@
-# 🦷 OdontoSync — Backend API
+# 🦷 OdontoSync — API do Backend
 
-Welcome to the standalone backend API for **OdontoSync**, a modern dental clinic management system. This application is built as a high-performance RESTful API using Fastify, TypeScript, and Prisma ORM, backed by a cloud-hosted PostgreSQL database on Neon DB.
-
----
-
-## 🛠️ Technology Stack
-
-- **Runtime & Language:** Node.js (TSX) & TypeScript (Strict Mode)
-- **Web Framework:** [Fastify](https://fastify.dev/) (High-performance, low-overhead web framework)
-- **Database & ORM:** PostgreSQL & [Prisma ORM](https://www.prisma.io/)
-- **Security:** JSON Web Tokens (JWT) & Fastify CORS middleware
-- **Development Tooling:** TSX (TypeScript Execute) & watch mode
+Bem-vindo à API do backend independente do **OdontoSync**, um sistema moderno de gestão de clínicas odontológicas. Esta aplicação foi construída como uma API RESTful de alta performance utilizando Fastify, TypeScript e Prisma ORM, conectada a um banco de dados PostgreSQL hospedado em nuvem no Neon DB.
 
 ---
 
-## 📂 Directory Structure
+## 🛠️ Tecnologias Utilizadas
+
+- **Runtime & Linguagem:** Node.js (TSX) & TypeScript (Modo Estrito / Strict Mode)
+- **Framework Web:** [Fastify](https://fastify.dev/) (Framework web de alta performance e baixo overhead)
+- **Banco de Dados & ORM:** PostgreSQL & [Prisma ORM](https://www.prisma.io/)
+- **Segurança:** JSON Web Tokens (JWT) & Middleware CORS do Fastify
+- **Ferramentas de Desenvolvimento:** TSX (TypeScript Execute) & Modo de Observação (watch mode)
+
+---
+
+## 📂 Estrutura de Diretórios
 
 ```text
 Backend/
 ├── prisma/
-│   ├── schema.prisma       # Database models & Prisma configurations
-│   └── migrations/         # SQL migration history
+│   ├── schema.prisma       # Modelos de dados e configurações do Prisma
+│   └── migrations/         # Histórico de migrações SQL
 ├── src/
 │   ├── lib/
-│   │   └── prisma.ts       # Centralized Prisma Client instance
-│   ├── modules/            # Domain-driven modules
-│   │   ├── appointments/   # Appointment creation, listing, status updates
-│   │   ├── auth/           # Authentication endpoints & RBAC middlewares
-│   │   ├── clinic/         # Clinic configuration rules
-│   │   └── patients/       # Patient accounts & search logic
+│   │   └── prisma.ts       # Instância centralizada do Prisma Client
+│   ├── modules/            # Módulos divididos por domínio de negócio
+│   │   ├── appointments/   # Criação, listagem e atualização de status de consultas
+│   │   ├── auth/           # Endpoints de autenticação e middlewares de RBAC
+│   │   ├── clinic/         # Regras e configurações da clínica
+│   │   └── patients/       # Contas de pacientes e busca de dados
 │   ├── types/
-│   │   └── fastify.d.ts    # Custom Fastify type augmentations (JWT User)
-│   ├── seed.ts             # Complete database seed script with mock data
-│   └── server.ts           # Server initialization, CORS, JWT & Route registrations
-├── .env.example            # Example configuration file
-├── .gitignore              # Ignored system and local configuration files
-├── package.json            # NPM scripts & dependencies
-└── tsconfig.json           # Strict TypeScript configuration
+│   │   └── fastify.d.ts    # Extensão de tipos do Fastify (Usuário logado via JWT)
+│   ├── seed.ts             # Script completo de semeadura do banco com dados de teste
+│   └── server.ts           # Inicialização do servidor, CORS, JWT e registro de rotas
+├── .env.example            # Exemplo de configuração de variáveis de ambiente
+├── .gitignore              # Arquivos e pastas locais ignorados pelo Git
+├── package.json            # Scripts do NPM e lista de dependências
+└── tsconfig.json           # Configurações estritas do TypeScript
 ```
 
 ---
 
-## ⚙️ Setup & Configuration
+## ⚙️ Instalação & Configuração
 
-### 1. Pre-requisites
-Make sure you have [Node.js](https://nodejs.org/) (v18+) and `npm` installed.
+### 1. Pré-requisitos
+Certifique-se de ter o [Node.js](https://nodejs.org/) (v18+) e o `npm` instalados em sua máquina.
 
-### 2. Install Dependencies
-Navigate to the backend directory and run:
+### 2. Instalar Dependências
+Navegue até o diretório do backend e execute:
 ```bash
 npm install
 ```
 
-### 3. Database Environment Variables
-Create a `.env` file in the root of the `Backend/` directory by copying `.env.example`:
+### 3. Configurar Variáveis de Ambiente
+Crie um arquivo `.env` na raiz do diretório `Backend/` duplicando o arquivo `.env.example`:
 ```bash
 cp .env.example .env
 ```
-Open the newly created `.env` file and insert your Neon DB connection string and JWT secret:
+Abra o arquivo `.env` criado e insira a string de conexão do seu Neon DB e a chave secreta do JWT:
 ```env
-DATABASE_URL="postgresql://<username>:<password>@<neon-host>/odontosync?sslmode=require"
-JWT_SECRET="your-super-secure-jwt-secret-key"
+DATABASE_URL="postgresql://<usuario>:<senha>@<host-neon>/odontosync?sslmode=require"
+JWT_SECRET="sua-chave-secreta-jwt-super-segura"
 ```
 
 ---
 
-## 🚀 Commands & Database Operations
+## 🚀 Comandos & Operações de Banco de Dados
 
-### Development Server
-Start the API server in watch mode:
+### Servidor de Desenvolvimento
+Inicie o servidor da API com recarga automática ao alterar arquivos:
 ```bash
 npm run dev
 ```
-The API will be running on `http://localhost:3333`.
+A API estará rodando em `http://localhost:3333`.
 
-### Database Migrations
-Deploy the database schema to your cloud Neon DB instance:
+### Sincronizar o Banco de Dados
+Envie a estrutura do schema Prisma diretamente para o seu banco Neon DB:
 ```bash
 npx prisma db push
 ```
-Or to run proper migration files during changes:
+Ou para gerar e rodar arquivos de migrações estruturadas:
 ```bash
-npx prisma migrate dev --name <migration-name>
+npx prisma migrate dev --name <nome-da-migracao>
 ```
 
-### Seed Database
-Seed your cloud database with clinical configurations, admin accounts, patients, and structured appointment data:
+### Semear o Banco de Dados (Seed)
+Popule o seu banco na nuvem com configurações da clínica, especialidades, contas administrativas, pacientes de teste e consultas estruturadas:
 ```bash
 npx ts-node src/seed.ts
 ```
-*(Alternatively, run the pre-configured script if available in package.json).*
 
 ---
 
-## 🔒 Security & Best Practices
+## 🔒 Segurança & Boas Práticas
 
-1. **Role-Based Access Control (RBAC):** Crucial administrative routes (like setting clinical configurations or listing comprehensive appointments) are strictly protected by the `requireAdmin` middleware.
-2. **Environment Variables Safety:** The `.env` file is excluded from version control in `.gitignore` to prevent any sensitive credentials from leaking.
-3. **Soft Delete & Tracking:** Per project rules, deletion operations only modify `status` fields to preserve database history and integrity.
+1. **Controle de Acesso Baseado em Papéis (RBAC):** Rotas confidenciais e administrativas (como modificação da clínica e listagem completa de agendamentos) são estritamente protegidas pelo middleware `requireAdmin`.
+2. **Proteção de Variáveis Locais:** O arquivo `.env` está configurado no `.gitignore` para impedir que senhas e chaves reais vazem no controle de versão.
+3. **Exclusão Lógica (Soft Delete):** Conforme as regras da clínica, os dados não são deletados fisicamente do banco de dados, sendo controlados através da coluna `status` (Ex: `CANCELLED`, `ABSENT`).
