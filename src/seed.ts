@@ -62,7 +62,7 @@ async function main() {
   console.log('🏢 Seeding clinic configuration...');
   await prisma.clinicConfig.create({
     data: {
-      name: 'Clínica OdontoSync',
+      name: 'Odonto Excell',
       address: 'Av. Paulista, 1000 - Bela Vista, São Paulo - SP',
       phone: '11999999999',
       logoUrl: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=300',
