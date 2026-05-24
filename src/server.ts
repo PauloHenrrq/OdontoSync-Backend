@@ -5,6 +5,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { appointmentRoutes } from './modules/appointments/appointment.routes.js';
 import { patientRoutes } from './modules/patients/patient.routes.js';
@@ -20,7 +22,22 @@ const app = Fastify({
 
 async function bootstrap() {
   // Plugins
-  await app.register(cors, { origin: true });
+  await app.register(helmet, {
+    contentSecurityPolicy: false, // Habilita compatibilidade fácil com a web de desenvolvimento
+  });
+  await app.register(rateLimit, {
+    max: 300,
+    timeWindow: '1 minute',
+    errorResponseBuilder: (request, context) => ({
+      error: 'Muitas requisições. Por favor, tente novamente mais tarde.',
+      code: 429,
+      retryAfter: context.after,
+    }),
+  });
+  await app.register(cors, { 
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] 
+  });
   await app.register(jwt, {
     secret: process.env.JWT_SECRET ?? 'odontosync-dev-secret',
   });

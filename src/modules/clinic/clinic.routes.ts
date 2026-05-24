@@ -5,6 +5,7 @@
 
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { AppointmentStatus } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 
 export async function clinicRoutes(app: FastifyInstance) {
@@ -14,10 +15,21 @@ export async function clinicRoutes(app: FastifyInstance) {
     return { config };
   });
 
+  // Schema de Validação
+  const updateConfigSchema = z.object({
+    name: z.string().optional(),
+    phone: z.string().optional(),
+    email: z.string().email().optional(),
+    address: z.string().optional(),
+    workingHours: z.string().optional(),
+    appointmentDuration: z.number().optional(),
+    maxAppointmentsPerSlot: z.number().optional(),
+  });
+
   // Atualizar configurações
   app.patch('/config/:id', { preHandler: [app.requireAdmin] }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const body = request.body as Record<string, unknown>;
+    const body = updateConfigSchema.parse(request.body);
 
     const config = await prisma.clinicConfig.update({
       where: { id },
@@ -25,6 +37,14 @@ export async function clinicRoutes(app: FastifyInstance) {
     });
 
     return reply.send({ config });
+  });
+
+  // Listar serviços odontológicos
+  app.get('/services', { preHandler: [app.authenticate] }, async () => {
+    const services = await prisma.dentalService.findMany({
+      orderBy: { name: 'asc' },
+    });
+    return { services };
   });
 
   // KPIs do Dashboard
@@ -36,16 +56,16 @@ export async function clinicRoutes(app: FastifyInstance) {
 
     const [confirmedToday, pendingContact, totalToday, absencesToday] = await Promise.all([
       prisma.appointment.count({
-        where: { date: { gte: today, lt: tomorrow }, status: 'CONFIRMED' },
+        where: { date: { gte: today, lt: tomorrow }, status: AppointmentStatus.CONFIRMED },
       }),
       prisma.appointment.count({
-        where: { date: { gte: today, lt: tomorrow }, status: 'PENDING' },
+        where: { date: { gte: today, lt: tomorrow }, status: AppointmentStatus.PENDING },
       }),
       prisma.appointment.count({
         where: { date: { gte: today, lt: tomorrow } },
       }),
       prisma.appointment.count({
-        where: { date: { gte: today, lt: tomorrow }, status: 'ABSENT' },
+        where: { date: { gte: today, lt: tomorrow }, status: AppointmentStatus.ABSENT },
       }),
     ]);
 

@@ -50,6 +50,10 @@ export async function appointmentRoutes(app: FastifyInstance) {
         time: body.time,
         notes: body.notes,
       },
+      include: {
+        service: true,
+        user: { select: { id: true, name: true, phone: true } },
+      },
     });
 
     return reply.code(201).send({ appointment });

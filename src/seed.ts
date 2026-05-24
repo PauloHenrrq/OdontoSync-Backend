@@ -87,11 +87,41 @@ async function main() {
   });
 
   const hashedPatientPassword = await hash('paciente123', 10);
-  const patient = await prisma.user.create({
+  const patient1 = await prisma.user.create({
     data: {
-      name: 'João de Souza (Paciente)',
-      email: 'paciente@odontosync.com',
-      phone: '11988888888', // Patient phone
+      name: 'Ana Paula Santos',
+      email: 'ana.santos@email.com',
+      phone: '11987654321',
+      password: hashedPatientPassword,
+      role: 'PATIENT',
+    },
+  });
+
+  const patient2 = await prisma.user.create({
+    data: {
+      name: 'Mariana Costa',
+      email: 'mariana.costa@email.com',
+      phone: '11976543210',
+      password: hashedPatientPassword,
+      role: 'PATIENT',
+    },
+  });
+
+  const patient3 = await prisma.user.create({
+    data: {
+      name: 'Ricardo Alves',
+      email: 'ricardo.alves@email.com',
+      phone: '11965432109',
+      password: hashedPatientPassword,
+      role: 'PATIENT',
+    },
+  });
+
+  const patient4 = await prisma.user.create({
+    data: {
+      name: 'Felipe Oliveira',
+      email: 'felipe.oliveira@email.com',
+      phone: '11954321098',
       password: hashedPatientPassword,
       role: 'PATIENT',
     },
@@ -101,6 +131,9 @@ async function main() {
   console.log('📅 Seeding appointments...');
   
   // Future dates
+  const today = new Date();
+  today.setHours(10, 0, 0, 0);
+
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(9, 0, 0, 0);
@@ -109,27 +142,52 @@ async function main() {
   nextWeek.setDate(nextWeek.getDate() + 7);
   nextWeek.setHours(14, 30, 0, 0);
 
-  // A) Patient linked appointment
+  // A) Today — Ana Paula Santos
   await prisma.appointment.create({
     data: {
-      phone: patient.phone,
-      userId: patient.id,
+      phone: patient1.phone,
+      userId: patient1.id,
       serviceId: services[0].id, // Limpeza
       dentistName: 'Dra. Amanda Silva',
-      date: tomorrow,
-      time: '09:00',
+      date: today,
+      time: '10:00',
       status: 'CONFIRMED',
       notes: 'Paciente relatou leve sensibilidade.',
     },
   });
 
-  // B) Orphan appointment (not registered user yet - phone doesn't match a user in db initially)
-  // Let's create an appointment for a phone number that doesn't exist as a user.
-  // This demonstrates the "orphan binding" logic.
+  // B) Today — Mariana Costa
   await prisma.appointment.create({
     data: {
-      phone: '11977777777', // Orphan phone
+      phone: patient2.phone,
+      userId: patient2.id,
+      serviceId: services[2].id, // Clareamento
+      dentistName: 'Dra. Amanda Silva',
+      date: today,
+      time: '14:00',
+      status: 'PENDING',
+    },
+  });
+
+  // C) Tomorrow — Ana Paula Santos
+  await prisma.appointment.create({
+    data: {
+      phone: patient1.phone,
+      userId: patient1.id,
       serviceId: services[1].id, // Restauração
+      dentistName: 'Dr. Roberto Santos',
+      date: tomorrow,
+      time: '09:00',
+      status: 'CONFIRMED',
+      notes: 'Retorno para avaliação.',
+    },
+  });
+
+  // D) Orphan appointment (phone doesn't match a user)
+  await prisma.appointment.create({
+    data: {
+      phone: '11977777777',
+      serviceId: services[3].id, // Tratamento de Canal
       dentistName: 'Dr. Roberto Santos',
       date: nextWeek,
       time: '14:30',
@@ -138,20 +196,20 @@ async function main() {
     },
   });
 
-  // C) Past appointment marked as "ABSENT" (Falta)
+  // E) Past appointment — Felipe Oliveira — marked as ABSENT
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   yesterday.setHours(16, 0, 0, 0);
 
   await prisma.appointment.create({
     data: {
-      phone: patient.phone,
-      userId: patient.id,
-      serviceId: services[2].id, // Clareamento
+      phone: patient4.phone,
+      userId: patient4.id,
+      serviceId: services[4].id, // Extração de Siso
       dentistName: 'Dr. Roberto Santos',
       date: yesterday,
       time: '16:00',
-      status: 'ABSENT', // FALTA (formerly no-show)
+      status: 'ABSENT',
       notes: 'Não compareceu e não justificou a ausência.',
     },
   });

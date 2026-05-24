@@ -16,9 +16,11 @@ export async function patientRoutes(app: FastifyInstance) {
         name: true,
         email: true,
         phone: true,
+        role: true,
+        status: true,
         avatarUrl: true,
         createdAt: true,
-        _count: { select: { appointments: true } },
+        updatedAt: true,
       },
       orderBy: { name: 'asc' },
     });
