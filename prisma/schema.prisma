@@ -132,7 +132,7 @@ model ClinicConfig {
   phone                String?
   logoUrl              String?
   absenceReduction     Boolean @default(true)
-  reminderHoursBefore  Int     @default(24)
+  reminderHoursBefore  String  @default("24")
   confirmationTemplate String  @default("")
   cancellationTemplate String  @default("")
 

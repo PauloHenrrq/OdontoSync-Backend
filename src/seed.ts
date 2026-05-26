@@ -67,7 +67,7 @@ async function main() {
       phone: '11999999999',
       logoUrl: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=300',
       absenceReduction: true,
-      reminderHoursBefore: 24,
+      reminderHoursBefore: '24',
       confirmationTemplate: 'Olá, [NOME]! Confirmamos sua consulta em [DATA] às [HORA]. Te esperamos!',
       cancellationTemplate: 'Olá, [NOME]! Sua consulta em [DATA] às [HORA] foi cancelada.',
     },

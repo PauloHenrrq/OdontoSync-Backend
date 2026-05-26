@@ -24,6 +24,10 @@ export async function clinicRoutes(app: FastifyInstance) {
     workingHours: z.string().optional(),
     appointmentDuration: z.number().optional(),
     maxAppointmentsPerSlot: z.number().optional(),
+    absenceReduction: z.boolean().optional(),
+    reminderHoursBefore: z.string().optional(),
+    confirmationTemplate: z.string().optional(),
+    cancellationTemplate: z.string().optional(),
   });
 
   // Atualizar configurações
