@@ -22,13 +22,49 @@ export async function appointmentRoutes(app: FastifyInstance) {
   app.get('/', { preHandler: [app.authenticate] }, async (request) => {
     const { userId, role } = request.user as { userId: string; role: string };
 
-    const where = role === 'ADMIN' ? {} : { userId };
+    let where: any = {};
+
+    if (role !== 'ADMIN') {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return { appointments: [] };
+      }
+
+      const cleanPhone = user.phone.replace(/\D/g, '');
+      const phoneFormats = [user.phone, cleanPhone];
+      if (cleanPhone.length === 11) {
+        phoneFormats.push(`(${cleanPhone.substring(0, 2)}) ${cleanPhone.substring(2, 7)}-${cleanPhone.substring(7)}`);
+      } else if (cleanPhone.length === 10) {
+        phoneFormats.push(`(${cleanPhone.substring(0, 2)}) ${cleanPhone.substring(2, 6)}-${cleanPhone.substring(6)}`);
+      }
+
+      where = {
+        OR: [
+          { userId },
+          { phone: { in: phoneFormats } }
+        ]
+      };
+    }
 
     const appointments = await prisma.appointment.findMany({
       where,
       include: { service: true, user: { select: { id: true, name: true, phone: true } } },
       orderBy: { date: 'desc' },
     });
+
+    // Auto-cura: vincula os agendamentos órfãos/desalinhados ao ID correto do usuário logado
+    if (role !== 'ADMIN' && appointments.length > 0) {
+      const unlinkedIds = appointments
+        .filter((apt) => apt.userId !== userId)
+        .map((apt) => apt.id);
+      
+      if (unlinkedIds.length > 0) {
+        prisma.appointment.updateMany({
+          where: { id: { in: unlinkedIds } },
+          data: { userId },
+        }).catch(err => console.error('Erro ao sincronizar userId nos agendamentos:', err));
+      }
+    }
 
     return { appointments };
   });
@@ -54,8 +90,20 @@ export async function appointmentRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'A data do agendamento não pode ser anterior a hoje.' });
     }
 
-    // Busca usuário pelo telefone para vincular (elo central)
-    let linkedUser = await prisma.user.findUnique({ where: { phone: body.phone } });
+    // Busca usuário pelo telefone com suporte a múltiplos formatos
+    const cleanPhone = body.phone.replace(/\D/g, '');
+    const phoneFormats = [cleanPhone];
+    if (cleanPhone.length === 11) {
+      phoneFormats.push(`(${cleanPhone.substring(0, 2)}) ${cleanPhone.substring(2, 7)}-${cleanPhone.substring(7)}`);
+    } else if (cleanPhone.length === 10) {
+      phoneFormats.push(`(${cleanPhone.substring(0, 2)}) ${cleanPhone.substring(2, 6)}-${cleanPhone.substring(6)}`);
+    }
+
+    let linkedUser = await prisma.user.findFirst({
+      where: {
+        phone: { in: phoneFormats },
+      },
+    });
 
     if (!linkedUser) {
       // Se não existir, criamos o usuário no banco de dados automaticamente
@@ -66,8 +114,8 @@ export async function appointmentRoutes(app: FastifyInstance) {
       linkedUser = await prisma.user.create({
         data: {
           name,
-          phone: body.phone,
-          email: `sem-email-${body.phone}@odontosync.com.br`,
+          phone: cleanPhone, // Armazena sempre limpo para consistência
+          email: `sem-email-${cleanPhone}@odontosync.com.br`,
           password: '', // Sem senha inicialmente
           role: 'PATIENT',
         }
@@ -76,13 +124,14 @@ export async function appointmentRoutes(app: FastifyInstance) {
 
     const appointment = await prisma.appointment.create({
       data: {
-        phone: body.phone,
+        phone: cleanPhone, // Armazena sempre limpo para consistência
         userId: linkedUser.id,
         serviceId: body.serviceId,
         dentistName: body.dentistName,
         date: new Date(body.date + 'T12:00:00'),
         time: body.time,
         notes: body.notes,
+        status: 'CONFIRMED', // Novo agendamento já é criado confirmado por padrão
       },
       include: {
         service: true,

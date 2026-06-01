@@ -31,9 +31,17 @@ export async function patientRoutes(app: FastifyInstance) {
   // Buscar paciente por telefone (elo central)
   app.get('/by-phone/:phone', { preHandler: [app.requireAdmin] }, async (request, reply) => {
     const { phone } = request.params as { phone: string };
+    const cleanPhone = phone.replace(/\D/g, '');
 
-    const patient = await prisma.user.findUnique({
-      where: { phone },
+    const phoneFormats = [phone, cleanPhone];
+    if (cleanPhone.length === 11) {
+      phoneFormats.push(`(${cleanPhone.substring(0, 2)}) ${cleanPhone.substring(2, 7)}-${cleanPhone.substring(7)}`);
+    } else if (cleanPhone.length === 10) {
+      phoneFormats.push(`(${cleanPhone.substring(0, 2)}) ${cleanPhone.substring(2, 6)}-${cleanPhone.substring(6)}`);
+    }
+
+    const patient = await prisma.user.findFirst({
+      where: { phone: { in: phoneFormats } },
       select: {
         id: true,
         name: true,
