@@ -4,10 +4,6 @@
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Carregar .env de forma segura e explícita no ponto de entrada global
 const envPath = path.resolve(__dirname, '../.env');
@@ -33,6 +29,8 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
+import { z } from 'zod';
+import { prisma } from './lib/prisma.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { appointmentRoutes } from './modules/appointments/appointment.routes.js';
 import { patientRoutes } from './modules/patients/patient.routes.js';
@@ -66,6 +64,36 @@ async function bootstrap() {
   });
   await app.register(jwt, {
     secret: process.env.JWT_SECRET ?? 'odontosync-dev-secret',
+  });
+
+  // Interceptor de erro global (Sanitização e Segurança em Produção)
+  app.setErrorHandler((error: any, request, reply) => {
+    app.log.error(error);
+
+    if (error instanceof z.ZodError) {
+      return reply.code(400).send({
+        error: 'Erro de validação nos dados enviados.',
+        code: 400,
+        details: error.format(),
+      });
+    }
+
+    if (reply.statusCode === 429) {
+      return reply.code(429).send({
+        error: 'Muitas requisições. Por favor, tente novamente mais tarde.',
+        code: 429,
+      });
+    }
+
+    const isProduction = process.env.NODE_ENV === 'production';
+    const message = isProduction 
+      ? 'Ocorreu um erro interno no servidor. Tente novamente mais tarde.'
+      : error.message;
+
+    return reply.code(error.statusCode || 500).send({
+      error: message,
+      code: error.statusCode || 500,
+    });
   });
 
   // Decorator para autenticação
@@ -111,6 +139,23 @@ async function bootstrap() {
     app.log.error(err);
     process.exit(1);
   }
+
+  // Graceful Shutdown (Encerramento gracioso do Fastify e do Prisma)
+  const closeGracefully = async (signal: string) => {
+    console.log(`\n🦷 Recebido sinal ${signal}. Encerrando o servidor de forma graciosa...`);
+    try {
+      await app.close();
+      await prisma.$disconnect();
+      console.log('✔ Conexões de banco de dados e servidor encerrados com sucesso.');
+      process.exit(0);
+    } catch (err) {
+      console.error('Erro ao encerrar conexões:', err);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGINT', () => closeGracefully('SIGINT'));
+  process.on('SIGTERM', () => closeGracefully('SIGTERM'));
 }
 
 bootstrap();
