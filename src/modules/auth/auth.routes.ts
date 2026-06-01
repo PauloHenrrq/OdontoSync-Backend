@@ -277,7 +277,7 @@ export async function authRoutes(app: FastifyInstance) {
     const otpData = forgotOtpStore.get(cleanEmail);
 
     // Permite "123456" como código mestre em ambiente de desenvolvimento local para resiliência de testes
-    const isMasterCode = body.code === '123456';
+    const isMasterCode = process.env.NODE_ENV !== 'production' && body.code === '123456';
 
     if (!otpData && !isMasterCode) {
       return reply.code(400).send({ error: 'Código de verificação inválido ou expirado.', code: 400 });
@@ -307,7 +307,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     // Validar código OTP novamente na redefinição para total segurança
     const otpData = forgotOtpStore.get(cleanEmail);
-    const isMasterCode = body.code === '123456';
+    const isMasterCode = process.env.NODE_ENV !== 'production' && body.code === '123456';
 
     if (!otpData && !isMasterCode) {
       return reply.code(400).send({ error: 'Código de verificação inválido ou expirado.', code: 400 });
