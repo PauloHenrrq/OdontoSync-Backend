@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { hash, compare } from 'bcryptjs';
 import { prisma } from '../../lib/prisma.js';
 import { sendMail } from '../../lib/mail.js';
-import { getForgotPasswordTemplate } from '../../lib/emailTemplates.js';
+import { getForgotPasswordTemplate, getPasswordChangedNotificationTemplate } from '../../lib/emailTemplates.js';
 
 const loginSchema = z.object({
   emailOrPhone: z.string().min(1),
@@ -341,6 +341,49 @@ export async function authRoutes(app: FastifyInstance) {
     forgotOtpStore.delete(cleanEmail);
 
     return reply.send({ success: true, message: 'Senha redefinida com sucesso!' });
+  });
+
+  // Alterar Senha de Usuário Autenticado
+  app.post('/change-password', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const body = z.object({
+      currentPassword: z.string(),
+      newPassword: z.string().min(6),
+    }).parse(request.body);
+
+    const userId = (request.user as any).userId;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return reply.code(404).send({ error: 'Usuário não encontrado', code: 404 });
+    }
+
+    const passwordMatch = await compare(body.currentPassword, user.password);
+    if (!passwordMatch) {
+      return reply.code(400).send({ error: 'A senha atual está incorreta.', code: 400 });
+    }
+
+    const hashedPassword = await hash(body.newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    // Enviar e-mail de notificação de alteração de senha
+    try {
+      const emailHtml = getPasswordChangedNotificationTemplate(user.name);
+      await sendMail({
+        to: user.email,
+        subject: 'Sua senha foi alterada — OdontoSync',
+        html: emailHtml,
+      });
+    } catch (mailErr) {
+      console.error('Erro ao enviar e-mail de notificação de troca de senha:', mailErr);
+    }
+
+    return reply.send({ success: true, message: 'Senha alterada com sucesso!' });
   });
 }
 
