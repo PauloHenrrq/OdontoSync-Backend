@@ -84,6 +84,7 @@ export async function sendMail({ to, subject, html }: SendMailParams) {
       const data = await response.json() as { messageId: string };
       return data;
     } catch (error) {
+      console.error('[SMTP ERROR] Falha na API da Brevo:', error);
       // Falha na API Brevo — tenta fallback abaixo
     }
   }
