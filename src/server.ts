@@ -37,11 +37,13 @@ import { patientRoutes } from './modules/patients/patient.routes.js';
 import { clinicRoutes } from './modules/clinic/clinic.routes.js';
 
 const app = Fastify({
-  logger: {
-    transport: {
-      target: 'pino-pretty',
-    },
-  },
+  logger: process.env.NODE_ENV === 'production'
+    ? true
+    : {
+        transport: {
+          target: 'pino-pretty',
+        },
+      },
 });
 
 async function bootstrap() {
