@@ -6,6 +6,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma.js';
+import { sendPushNotification } from '../../lib/pushNotification.js';
 
 const bookingSchema = z.object({
   phone: z.string().min(10),
@@ -62,7 +63,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
         prisma.appointment.updateMany({
           where: { id: { in: unlinkedIds } },
           data: { userId },
-        }).catch(err => console.error('Erro ao sincronizar userId nos agendamentos:', err));
+        }).catch(() => {});
       }
     }
 
@@ -138,6 +139,19 @@ export async function appointmentRoutes(app: FastifyInstance) {
         user: { select: { id: true, name: true, phone: true } },
       },
     });
+
+    // Disparar push notification para o paciente em segundo plano
+    if (linkedUser.pushToken) {
+      const dateFormatted = new Date(body.date + 'T12:00:00')
+        .toLocaleDateString('pt-BR');
+
+      sendPushNotification(
+        linkedUser.pushToken,
+        '📅 Nova Consulta Agendada!',
+        `Sua consulta foi marcada para ${dateFormatted} às ${body.time}.`,
+        { appointmentId: appointment.id }
+      ).catch(() => {});
+    }
 
     return reply.code(201).send({ appointment });
   });

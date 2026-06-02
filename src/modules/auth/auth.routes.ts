@@ -103,9 +103,7 @@ export async function authRoutes(app: FastifyInstance) {
       expiresAt: Date.now() + 5 * 60 * 1000,
     });
 
-    console.log(`\n--- [SEGURANÇA ODONTOSYNC] ---`);
-    console.log(`WhatsApp OTP enviado para ${cleanPhone}: ${code}`);
-    console.log(`--------------------------------\n`);
+
 
     return reply.send({
       success: true,
@@ -380,6 +378,19 @@ export async function authRoutes(app: FastifyInstance) {
     });
 
     return reply.send({ success: true, message: 'Senha alterada com sucesso!' });
+  });
+
+  // Salvar Push Token do dispositivo (chamado pelo app após login/register)
+  app.post('/push-token', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const { pushToken } = z.object({ pushToken: z.string().min(1) }).parse(request.body);
+    const { userId } = request.user as { userId: string };
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { pushToken },
+    });
+
+    return reply.send({ success: true });
   });
 }
 

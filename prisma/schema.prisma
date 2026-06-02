@@ -59,6 +59,7 @@ model User {
   role      UserRole     @default(PATIENT)
   status    EntityStatus @default(ACTIVE)
   avatarUrl String?
+  pushToken String?      // Expo Push Token para notificações nativas
 
   appointments  Appointment[]
   notifications Notification[]

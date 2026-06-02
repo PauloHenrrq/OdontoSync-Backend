@@ -27,12 +27,7 @@ async function getEtherealTransporter() {
         pass: testAccount.pass,
       },
     });
-    console.log(`\n--- [MAIL CONFIG] Usando conta de teste do Ethereal Mail ---`);
-    console.log(`User: ${testAccount.user}`);
-    console.log(`Pass: ${testAccount.pass}`);
-    console.log(`-----------------------------------------------------------\n`);
   } catch (error) {
-    console.error('Falha ao inicializar Ethereal Mail, usando transportador JSON:', error);
     etherealTransporter = nodemailer.createTransport({
       jsonTransport: true
     });
@@ -58,7 +53,6 @@ export async function sendMail({ to, subject, html }: SendMailParams) {
   const isBrevoApi = pass && (pass.startsWith('xsmtpsib-') || pass.startsWith('xkeysib-') || pass.startsWith('api-'));
 
   if (isBrevoApi) {
-    console.log(`\n--- [MAIL CONFIG] Enviando e-mail via API HTTP da Brevo ---`);
     try {
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
@@ -88,16 +82,14 @@ export async function sendMail({ to, subject, html }: SendMailParams) {
       }
 
       const data = await response.json() as { messageId: string };
-      console.log(`E-mail enviado com sucesso via API HTTP para ${to}. MessageId: ${data.messageId}`);
       return data;
     } catch (error) {
-      console.error('Falha crítica ao enviar via API HTTP da Brevo. Tentando fallback...', error);
+      // Falha na API Brevo — tenta fallback abaixo
     }
   }
 
   // Fallback SMTP Clássico (se configurado com outro serviço e não for Brevo)
   if (host && port && user && pass && !isBrevoApi) {
-    console.log(`\n--- [MAIL CONFIG] Enviando via SMTP Clássico ---`);
     const classicTransporter = nodemailer.createTransport({
       host,
       port: Number(port),
@@ -114,12 +106,10 @@ export async function sendMail({ to, subject, html }: SendMailParams) {
       subject,
       html,
     });
-    console.log(`E-mail real enviado via SMTP clássico para ${to}. MessageId: ${info.messageId}`);
     return info;
   }
 
   // Fallback Sandbox Ethereal
-  console.log(`\n--- [MAIL CONFIG] Acionando sandbox do Ethereal Mail ---`);
   const ethereal = await getEtherealTransporter();
   const info = await ethereal.sendMail({
     from,
@@ -127,13 +117,6 @@ export async function sendMail({ to, subject, html }: SendMailParams) {
     subject,
     html,
   });
-
-  const previewUrl = nodemailer.getTestMessageUrl(info);
-  console.log(`\n--- [E-MAIL ENVIADO (TESTE)] ---`);
-  console.log(`Para: ${to}`);
-  console.log(`Assunto: ${subject}`);
-  console.log(`URL de Visualização Ethereal: ${previewUrl}`);
-  console.log(`---------------------------------\n`);
 
   return info;
 }
