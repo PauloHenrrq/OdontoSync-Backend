@@ -256,7 +256,7 @@ export async function authRoutes(app: FastifyInstance) {
       subject: 'Recuperação de Senha — OdontoSync',
       html: emailHtml,
     }).catch((error) => {
-      // Logga internamente caso ocorra falha de SMTP em segundo plano
+      console.error('[SMTP ERROR] Falha ao enviar email de recuperação para:', cleanEmail, error);
     });
 
     return reply.send({ success: true, message: 'Código enviado com sucesso!' });
@@ -374,7 +374,7 @@ export async function authRoutes(app: FastifyInstance) {
       subject: 'Sua senha foi alterada — OdontoSync',
       html: emailHtml,
     }).catch((mailErr) => {
-      // Logga internamente caso ocorra falha de SMTP em segundo plano
+      console.error('[SMTP ERROR] Falha ao enviar email de alteração de senha para:', user.email, mailErr);
     });
 
     return reply.send({ success: true, message: 'Senha alterada com sucesso!' });

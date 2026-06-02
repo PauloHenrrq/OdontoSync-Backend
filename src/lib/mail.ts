@@ -110,6 +110,7 @@ export async function sendMail({ to, subject, html }: SendMailParams) {
   }
 
   // Fallback Sandbox Ethereal
+  console.warn('[SMTP WARNING] Credenciais SMTP reais ausentes ou incompletas no .env. Utilizando fallback Ethereal Sandbox (envio simulado).');
   const ethereal = await getEtherealTransporter();
   const info = await ethereal.sendMail({
     from,
