@@ -251,17 +251,15 @@ export async function authRoutes(app: FastifyInstance) {
       expiresAt: Date.now() + 10 * 60 * 1000,
     });
 
-    // Enviar o e-mail premium
-    try {
-      const emailHtml = getForgotPasswordTemplate(user.name, code);
-      await sendMail({
-        to: cleanEmail,
-        subject: 'Recuperação de Senha — OdontoSync',
-        html: emailHtml,
-      });
-    } catch (error) {
-      console.error('Falha ao enviar e-mail de recuperação:', error);
-    }
+    // Enviar o e-mail de recuperação em segundo plano (evita bloquear o cliente HTTP)
+    const emailHtml = getForgotPasswordTemplate(user.name, code);
+    sendMail({
+      to: cleanEmail,
+      subject: 'Recuperação de Senha — OdontoSync',
+      html: emailHtml,
+    }).catch((error) => {
+      // Logga internamente caso ocorra falha de SMTP em segundo plano
+    });
 
     return reply.send({ success: true, message: 'Código enviado com sucesso!' });
   });
@@ -371,17 +369,15 @@ export async function authRoutes(app: FastifyInstance) {
       data: { password: hashedPassword },
     });
 
-    // Enviar e-mail de notificação de alteração de senha
-    try {
-      const emailHtml = getPasswordChangedNotificationTemplate(user.name);
-      await sendMail({
-        to: user.email,
-        subject: 'Sua senha foi alterada — OdontoSync',
-        html: emailHtml,
-      });
-    } catch (mailErr) {
-      console.error('Erro ao enviar e-mail de notificação de troca de senha:', mailErr);
-    }
+    // Enviar e-mail de notificação de alteração de senha em segundo plano (evita bloquear o cliente HTTP)
+    const emailHtml = getPasswordChangedNotificationTemplate(user.name);
+    sendMail({
+      to: user.email,
+      subject: 'Sua senha foi alterada — OdontoSync',
+      html: emailHtml,
+    }).catch((mailErr) => {
+      // Logga internamente caso ocorra falha de SMTP em segundo plano
+    });
 
     return reply.send({ success: true, message: 'Senha alterada com sucesso!' });
   });
