@@ -13,7 +13,7 @@ const bookingSchema = z.object({
   serviceId: z.string().uuid(),
   dentistName: z.string().min(2),
   date: z.string(), // ISO date
-  time: z.string(), // HH:mm
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Formato de hora inválido (HH:MM)"), // HH:mm de 00:00 a 23:59
   notes: z.string().optional(),
   patientName: z.string().optional(),
 });
