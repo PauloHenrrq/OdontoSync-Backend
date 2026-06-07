@@ -76,15 +76,15 @@ export async function appointmentRoutes(app: FastifyInstance) {
     const { userId } = request.user as { userId: string };
 
     // Valida se a data é válida
-    const parsedDate = new Date(body.date + 'T12:00:00');
+    const parsedDate = new Date(body.date + 'T12:00:00-03:00');
     if (isNaN(parsedDate.getTime())) {
       return reply.code(400).send({ error: 'Data inválida.' });
     }
 
     // Valida se não está no passado
-    const today = new Date();
+    const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
     today.setHours(0, 0, 0, 0);
-    const appointmentDate = new Date(body.date + 'T12:00:00');
+    const appointmentDate = new Date(body.date + 'T12:00:00-03:00');
     appointmentDate.setHours(0, 0, 0, 0);
 
     if (appointmentDate < today) {
@@ -129,7 +129,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
         userId: linkedUser.id,
         serviceId: body.serviceId,
         dentistName: body.dentistName,
-        date: new Date(body.date + 'T12:00:00'),
+        date: new Date(body.date + 'T12:00:00-03:00'),
         time: body.time,
         notes: body.notes,
         status: 'CONFIRMED', // Novo agendamento já é criado confirmado por padrão
@@ -142,8 +142,8 @@ export async function appointmentRoutes(app: FastifyInstance) {
 
     // Disparar push notification para o paciente em segundo plano
     if (linkedUser.pushToken) {
-      const dateFormatted = new Date(body.date + 'T12:00:00')
-        .toLocaleDateString('pt-BR');
+      const dateFormatted = new Date(body.date + 'T12:00:00-03:00')
+        .toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
       sendPushNotification(
         linkedUser.pushToken,
@@ -174,7 +174,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
     const { date } = request.params as { date: string };
 
     const appointments = await prisma.appointment.findMany({
-      where: { date: new Date(date + 'T12:00:00') },
+      where: { date: new Date(date + 'T12:00:00-03:00') },
       include: { service: true, user: { select: { id: true, name: true, phone: true } } },
       orderBy: { time: 'asc' },
     });

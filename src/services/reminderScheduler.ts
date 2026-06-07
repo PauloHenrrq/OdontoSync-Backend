@@ -21,7 +21,7 @@ export async function checkAndSendReminders() {
     if (hoursList.length === 0) return;
 
     // Fetch pending/confirmed appointments in the future
-    const today = new Date();
+    const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
     today.setHours(0, 0, 0, 0);
 
     const appointments = await prisma.appointment.findMany({
@@ -40,9 +40,9 @@ export async function checkAndSendReminders() {
       // Patients who don't have a push token can't receive push notifications anyway
       if (!apt.user || !apt.user.pushToken) continue;
 
-      // Determine exact date/time of appointment (date part from UTC Date + time string)
+      // Determine exact date/time of appointment (date part from UTC Date + time string in Brazil timezone)
       const dateStr = apt.date.toISOString().split('T')[0];
-      const aptDateTime = new Date(`${dateStr}T${apt.time}:00`);
+      const aptDateTime = new Date(`${dateStr}T${apt.time}:00-03:00`);
 
       const diffMs = aptDateTime.getTime() - now.getTime();
       const diffHours = diffMs / (1000 * 60 * 60);
@@ -56,7 +56,8 @@ export async function checkAndSendReminders() {
         const upperBound = hoursBefore;
 
         if (diffHours >= lowerBound && diffHours <= upperBound) {
-          const aptDateFormatted = new Date(`${dateStr}T12:00:00`).toLocaleDateString('pt-BR');
+          const [year, month, day] = dateStr.split('-');
+          const aptDateFormatted = `${day}/${month}/${year}`;
           const title = '⏰ Lembrete de Consulta';
           
           // Formata o template configurado pela clínica
