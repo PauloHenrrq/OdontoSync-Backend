@@ -35,6 +35,8 @@ import { authRoutes } from './modules/auth/auth.routes.js';
 import { appointmentRoutes } from './modules/appointments/appointment.routes.js';
 import { patientRoutes } from './modules/patients/patient.routes.js';
 import { clinicRoutes } from './modules/clinic/clinic.routes.js';
+import { notificationRoutes } from './modules/notifications/notification.routes.js';
+import { startReminderScheduler, stopReminderScheduler } from './services/reminderScheduler.js';
 
 const app = Fastify({
   logger: process.env.NODE_ENV === 'production'
@@ -124,6 +126,7 @@ async function bootstrap() {
   await app.register(appointmentRoutes, { prefix: '/api/appointments' });
   await app.register(patientRoutes, { prefix: '/api/patients' });
   await app.register(clinicRoutes, { prefix: '/api/clinic' });
+  await app.register(notificationRoutes, { prefix: '/api/notifications' });
 
   // Health check
   app.get('/api/health', async () => ({
@@ -137,6 +140,7 @@ async function bootstrap() {
   try {
     await app.listen({ port, host: '0.0.0.0' });
     console.log(`🦷 OdontoSync API running on http://localhost:${port}`);
+    startReminderScheduler();
   } catch (err) {
     app.log.error(err);
     process.exit(1);
@@ -146,6 +150,7 @@ async function bootstrap() {
   const closeGracefully = async (signal: string) => {
     console.log(`\n🦷 Recebido sinal ${signal}. Encerrando o servidor de forma graciosa...`);
     try {
+      stopReminderScheduler();
       await app.close();
       await prisma.$disconnect();
       console.log('✔ Conexões de banco de dados e servidor encerrados com sucesso.');
