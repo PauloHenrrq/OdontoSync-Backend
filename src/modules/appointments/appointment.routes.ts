@@ -164,7 +164,31 @@ export async function appointmentRoutes(app: FastifyInstance) {
     const appointment = await prisma.appointment.update({
       where: { id },
       data: { status },
+      include: {
+        user: true,
+        service: true,
+      },
     });
+
+    // Disparar push notification para o paciente em segundo plano avisando do novo status
+    if (appointment.user && appointment.user.pushToken) {
+      const statusLabels: Record<string, string> = {
+        CONFIRMED: 'Confirmada',
+        CANCELLED: 'Cancelada',
+        COMPLETED: 'Concluída',
+        ABSENT: 'Marcada como Ausente',
+      };
+      const statusLabel = statusLabels[status] || status;
+      const dateFormatted = new Date(appointment.date.toISOString().split('T')[0] + 'T12:00:00-03:00')
+        .toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
+      sendPushNotification(
+        appointment.user.pushToken,
+        '📅 Atualização de Consulta',
+        `Sua consulta de ${appointment.service?.name || 'dentista'} para dia ${dateFormatted} às ${appointment.time} foi ${statusLabel.toLowerCase()}.`,
+        { type: 'STATUS_CHANGED', appointmentId: appointment.id }
+      ).catch(() => {});
+    }
 
     return reply.send({ appointment });
   });
