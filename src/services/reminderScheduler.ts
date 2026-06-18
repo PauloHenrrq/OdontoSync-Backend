@@ -37,8 +37,10 @@ export async function checkAndSendReminders() {
     const now = new Date();
 
     for (const apt of appointments) {
-      // Patients who don't have a push token can't receive push notifications anyway
-      if (!apt.user || !apt.user.pushToken) continue;
+      const isUrgent = apt.notes?.toUpperCase().includes('URGENTE') ?? false;
+
+      // Patients who don't have a push token can't receive push notifications anyway, EXCEPT if it's URGENT (where we want to ensure database notification is created)
+      if (!isUrgent && (!apt.user || !apt.user.pushToken)) continue;
 
       // Determine exact date/time of appointment (date part from UTC Date + time string in Brazil timezone)
       const dateStr = apt.date.toISOString().split('T')[0];
@@ -58,29 +60,31 @@ export async function checkAndSendReminders() {
         if (diffHours >= lowerBound && diffHours <= upperBound) {
           const [year, month, day] = dateStr.split('-');
           const aptDateFormatted = `${day}/${month}/${year}`;
-          const title = '⏰ Lembrete de Consulta';
+          const title = isUrgent ? '⚠️ Lembrete de Consulta URGENTE' : '⏰ Lembrete de Consulta';
           
           // Formata o template configurado pela clínica
           let template = config.confirmationTemplate || 'Olá [NOME], passando para lembrar da sua consulta no dia [DATA] às [HORA].';
           let msg = template
-            .replace(/\[NOME\]/gi, apt.user.name)
+            .replace(/\[NOME\]/gi, apt.user?.name || 'Paciente')
             .replace(/\[DATA\]/gi, aptDateFormatted)
             .replace(/\[HORA\]/gi, apt.time);
 
           // Check if we already sent this exact notification
           const alreadySent = await prisma.notification.findFirst({
             where: {
-              userId: apt.userId,
+              phone: apt.phone,
               title,
               message: msg,
             },
           });
 
           if (!alreadySent) {
-            // 1. Send push notification to user's device
-            await sendPushNotification(apt.user.pushToken, title, msg, {
-              appointmentId: apt.id,
-            });
+            // 1. Send push notification if token exists
+            if (apt.user?.pushToken) {
+              await sendPushNotification(apt.user.pushToken, title, msg, {
+                appointmentId: apt.id,
+              }).catch(() => {});
+            }
 
             // 2. Save notification in database so it appears in in-app alerts and prevents duplicate sends
             await prisma.notification.create({
@@ -95,7 +99,51 @@ export async function checkAndSendReminders() {
               },
             });
 
-            console.log(`[ReminderScheduler] Sent push reminder for appointment ${apt.id} to user ${apt.user.name}`);
+            console.log(`[ReminderScheduler] Sent push reminder for appointment ${apt.id} to user ${apt.user?.name || apt.phone}`);
+
+            // Se for urgente, notifica todos os administradores internamente e via push se possuírem token
+            if (isUrgent) {
+              try {
+                const admins = await prisma.user.findMany({
+                  where: { role: 'ADMIN' },
+                });
+                
+                const adminTitle = '⚠️ Alerta: Consulta URGENTE';
+                const adminMsg = `Atenção: Consulta urgente agendada para ${apt.user?.name || apt.phone} no dia ${aptDateFormatted} às ${apt.time}.`;
+
+                for (const admin of admins) {
+                  const adminAlreadyNotified = await prisma.notification.findFirst({
+                    where: {
+                      userId: admin.id,
+                      title: adminTitle,
+                      message: adminMsg,
+                    },
+                  });
+
+                  if (!adminAlreadyNotified) {
+                    await prisma.notification.create({
+                      data: {
+                        userId: admin.id,
+                        phone: admin.phone,
+                        channel: 'PUSH',
+                        title: adminTitle,
+                        message: adminMsg,
+                        status: 'SENT',
+                        sentAt: new Date(),
+                      },
+                    });
+
+                    if (admin.pushToken) {
+                      await sendPushNotification(admin.pushToken, adminTitle, adminMsg, {
+                        appointmentId: apt.id,
+                      }).catch(() => {});
+                    }
+                  }
+                }
+              } catch (adminErr) {
+                console.error('[ReminderScheduler - Admin Notify Error]:', adminErr);
+              }
+            }
           }
         }
       }
