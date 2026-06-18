@@ -149,7 +149,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
         linkedUser.pushToken,
         '📅 Nova Consulta Agendada!',
         `Sua consulta foi marcada para ${dateFormatted} às ${body.time}.`,
-        { appointmentId: appointment.id }
+        { type: 'NEW_APPOINTMENT', appointmentId: appointment.id }
       ).catch(() => {});
     }
 
