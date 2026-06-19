@@ -44,4 +44,15 @@ export async function notificationRoutes(app: FastifyInstance) {
 
     return { success: true };
   });
+
+  // Limpar todas as notificações lidas do histórico
+  app.delete('/clear-read', { preHandler: [app.authenticate] }, async (request, reply) => {
+    const { userId } = request.user as { userId: string };
+
+    await prisma.notification.deleteMany({
+      where: { userId, read: true },
+    });
+
+    return reply.send({ success: true });
+  });
 }
